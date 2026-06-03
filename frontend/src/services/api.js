@@ -4,7 +4,10 @@
  */
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// In production (Vercel monorepo), frontend & backend share the same domain,
+// so we use a relative /api path. In local dev, we point to localhost:5000.
+const API_URL = process.env.REACT_APP_API_URL ||
+  (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:5000/api');
 
 // Create Axios instance with base configuration
 const api = axios.create({
