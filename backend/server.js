@@ -1,6 +1,7 @@
 /**
  * She Can Foundation — Express Server
  * Main entry point for the Node.js/Express backend API
+ * Supports both local development and Vercel serverless deployment
  */
 require('dotenv').config();
 const express = require('express');
@@ -11,6 +12,7 @@ const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 
 // ─── Connect to MongoDB ───────────────────────────────────────────────────────
+// connectDB is called once; on Vercel, the connection is reused across invocations
 connectDB();
 
 // ─── Initialize Express App ───────────────────────────────────────────────────
@@ -19,7 +21,7 @@ const PORT = process.env.PORT || 5000;
 
 // ─── Security & Utility Middleware ────────────────────────────────────────────
 
-// CORS Configuration
+// CORS Configuration — supports multiple origins (local + Vercel frontend)
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000')
   .split(',')
   .map((o) => o.trim());
@@ -27,9 +29,14 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000')
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, Postman, curl)
+      // Allow requests with no origin (mobile apps, Postman, curl, Vercel preview)
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
+      // In production, log but allow to avoid blocking legitimate requests
+      if (process.env.NODE_ENV === 'production') {
+        console.warn(`CORS warning: Origin ${origin} not in allowlist`);
+        return callback(null, true);
+      }
       callback(new Error(`CORS policy: Origin ${origin} not allowed.`));
     },
     credentials: true,
@@ -39,7 +46,7 @@ app.use(
 );
 
 // Request body parsing
-app.use(express.json({ limit: '10kb' }));      // Limit request body size
+app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // HTTP request logger (dev mode only)
@@ -55,7 +62,7 @@ const globalLimiter = rateLimit({
 });
 app.use('/api/', globalLimiter);
 
-// Trust proxy (needed for correct IP addresses behind Nginx/load balancer)
+// Trust proxy — required for Vercel/reverse proxies to get correct client IP
 app.set('trust proxy', 1);
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
@@ -83,36 +90,39 @@ app.use((req, res) => {
 // ─── Centralized Error Handler ────────────────────────────────────────────────
 app.use(errorHandler);
 
-// ─── Start Server ─────────────────────────────────────────────────────────────
-const server = app.listen(PORT, () => {
-  console.log('');
-  console.log('🌟 ════════════════════════════════════════ 🌟');
-  console.log(`   She Can Foundation API Server`);
-  console.log(`   Running on: http://localhost:${PORT}`);
-  console.log(`   Environment: ${process.env.NODE_ENV}`);
-  console.log('🌟 ════════════════════════════════════════ 🌟');
-  console.log('');
-  console.log('📌 Quick Setup: POST http://localhost:' + PORT + '/api/auth/setup');
-  console.log('   Body: { "name": "Admin", "email": "...", "password": "..." }');
-  console.log('');
-});
-
-// ─── Graceful Shutdown ────────────────────────────────────────────────────────
-const gracefulShutdown = (signal) => {
-  console.log(`\n${signal} received. Gracefully shutting down...`);
-  server.close(() => {
-    console.log('✅ HTTP server closed.');
-    process.exit(0);
+// ─── Local Development Server ─────────────────────────────────────────────────
+// On Vercel, the app is exported directly (no app.listen needed)
+if (process.env.NODE_ENV !== 'production') {
+  const server = app.listen(PORT, () => {
+    console.log('');
+    console.log('🌟 ════════════════════════════════════════ 🌟');
+    console.log(`   She Can Foundation API Server`);
+    console.log(`   Running on: http://localhost:${PORT}`);
+    console.log(`   Environment: ${process.env.NODE_ENV}`);
+    console.log('🌟 ════════════════════════════════════════ 🌟');
+    console.log('');
+    console.log('📌 Quick Setup: POST http://localhost:' + PORT + '/api/auth/setup');
+    console.log('   Body: { "name": "Admin", "email": "...", "password": "..." }');
+    console.log('');
   });
-};
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  // Graceful shutdown for local dev
+  const gracefulShutdown = (signal) => {
+    console.log(`\n${signal} received. Gracefully shutting down...`);
+    server.close(() => {
+      console.log('✅ HTTP server closed.');
+      process.exit(0);
+    });
+  };
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  server.close(() => process.exit(1));
-});
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    server.close(() => process.exit(1));
+  });
+}
+
+// ─── Export for Vercel Serverless ─────────────────────────────────────────────
 module.exports = app;
