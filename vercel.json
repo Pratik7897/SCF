@@ -19,32 +19,11 @@
       "dest": "/backend/server.js"
     },
     {
-      "src": "/static/js/(.*)",
-      "dest": "/frontend/build/static/js/$1"
-    },
-    {
-      "src": "/static/css/(.*)",
-      "dest": "/frontend/build/static/css/$1"
-    },
-    {
-      "src": "/static/media/(.*)",
-      "dest": "/frontend/build/static/media/$1"
-    },
-    {
-      "src": "/favicon.ico",
-      "dest": "/frontend/build/favicon.ico"
-    },
-    {
-      "src": "/manifest.json",
-      "dest": "/frontend/build/manifest.json"
-    },
-    {
-      "src": "/robots.txt",
-      "dest": "/frontend/build/robots.txt"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/build/index.html"
+      "dest": "/index.html"
     }
   ]
 }
