@@ -1,12 +1,11 @@
 {
   "version": 2,
-  "name": "scf",
   "builds": [
     {
-      "src": "frontend/package.json",
+      "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "build"
+        "distDir": "frontend/build"
       }
     },
     {
@@ -24,7 +23,7 @@
       "dest": "/frontend/build/static/$1"
     },
     {
-      "src": "/(.*\\.(ico|png|json|txt|map)$)",
+      "src": "/(.*\\.(ico|png|json|txt|map|js|css|woff|woff2|ttf|eot|svg)$)",
       "dest": "/frontend/build/$1"
     },
     {

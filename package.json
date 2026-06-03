@@ -1,0 +1,12 @@
+{
+  "name": "scf-she-can-foundation",
+  "version": "1.0.0",
+  "description": "She Can Foundation — Full Stack Monorepo (Frontend + Backend)",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "start": "cd backend && node server.js"
+  },
+  "engines": {
+    "node": ">=18.x"
+  }
+}
